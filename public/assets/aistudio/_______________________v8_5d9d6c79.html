@@ -1,0 +1,1072 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>등불항로 사전예약</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 밤바다 위 항해일지 — 히어로(등불 캔버스) → 사전예약 폼 + 누적 보상 항로 → 특징 → 유의사항 */
+:root{
+  --sea:#0b1a22; --hull:#11262f; --line:#24414b; --fg:#ece6d6; --muted:#9db0ad;
+  --lamp:#f2b84b; --lamp-ink:#2a1a00; --ok:#7fd1a8; --err:#ff8f7a;
+  --f-display:"Hahmlet","Nanum Myeongjo",serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.65}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--lamp);font-weight:700}
+.sample{display:inline-block;font-size:11px;letter-spacing:.08em;border:1px solid var(--line);color:var(--muted);padding:2px 8px;border-radius:99px}
+a{color:var(--lamp)}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:3px}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(120% 80% at 70% 0%,#173a45 0%,var(--sea) 60%)}
+#sky{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero .wrap{position:relative;padding-block:56px 48px;display:grid;gap:28px}
+.hero-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hero h1{font-size:clamp(44px,9vw,96px);font-weight:900;letter-spacing:-.02em}
+.hero h1 small{display:block;font-size:.26em;font-weight:500;letter-spacing:.3em;color:var(--muted);margin-top:10px}
+.lede{max-width:34em;color:var(--fg);font-size:17px;margin:0}
+.launch{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end}
+.count{display:flex;gap:10px}
+.count div{min-width:64px;text-align:center;background:rgba(11,26,34,.7);border:1px solid var(--line);border-radius:8px;padding:8px 6px}
+.count b{display:block;font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--lamp);line-height:1.2}
+.count span{font-size:11px;color:var(--muted)}
+.launch-meta{font-size:13px;color:var(--muted)}
+.launch-meta strong{color:var(--fg);font-size:15px;display:block}
+.btn{appearance:none;border:0;cursor:pointer;font:inherit;font-weight:700;background:var(--lamp);color:var(--lamp-ink);padding:14px 22px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-flex;gap:8px;align-items:center;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px -6px rgba(242,184,75,.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Main grid */
+section{padding-block:56px}
+.grid2{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:start}
+.grid2>*{min-width:0}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.sec-head{display:grid;gap:8px;margin-bottom:24px}
+.sec-head h2{font-size:clamp(26px,4vw,34px)}
+.sec-head p{margin:0;color:var(--muted)}
+
+/* Form */
+form{background:var(--hull);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:18px}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
+legend,label.lb{font-size:13px;font-weight:700;color:var(--muted);padding:0;margin-bottom:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);border-radius:8px;padding:12px;text-align:center;cursor:pointer;font-weight:500;transition:border-color .15s,background .15s}
+.seg input:checked+label{border-color:var(--lamp);background:rgba(242,184,75,.1);color:var(--lamp)}
+.seg input:focus-visible+label{outline:2px solid var(--lamp);outline-offset:2px}
+.srv{grid-template-columns:repeat(3,1fr)}
+@media (max-width:480px){.srv{grid-template-columns:1fr}}
+.srv label{display:grid;gap:4px;text-align:left;padding:12px 14px}
+.srv label b{font-family:var(--f-display);font-size:17px}
+.srv label small{font-size:12px;color:var(--muted);line-height:1.4}
+.pill{justify-self:start;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid currentColor}
+.pill.new{color:var(--ok)}.pill.ok{color:var(--muted)}.pill.busy{color:var(--err)}
+.chs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:420px){.chs{grid-template-columns:repeat(2,1fr)}}
+.chs input{position:absolute;opacity:0;pointer-events:none}
+.chs label{border:1px solid var(--line);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;display:grid;gap:2px;font-weight:500}
+.chs label small{font-size:11px;color:var(--muted)}
+.chs input:checked+label{border-color:var(--lamp);background:rgba(242,184,75,.1);color:var(--lamp)}
+.chs input:focus-visible+label{outline:2px solid var(--lamp);outline-offset:2px}
+.chs input:disabled+label{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.meter{height:4px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:4px}
+.meter i{display:block;height:100%;background:var(--muted)}
+.chs input:checked+label .meter i{background:var(--lamp)}
+.field{display:grid;gap:6px}
+input[type=tel]{width:100%;font:inherit;font-family:var(--f-mono);font-size:17px;letter-spacing:.04em;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+input[type=tel]:focus{border-color:var(--lamp);outline:none}
+input[aria-invalid=true]{border-color:var(--err)}
+.hint{font-size:12px;color:var(--muted)}
+.hint.err{color:var(--err)}
+.agree{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer}
+.chk input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--lamp);flex:none}
+.chk.all{font-weight:700}
+.tag{font-size:11px;font-weight:700;margin-right:4px}
+.tag.req{color:var(--lamp)}.tag.opt{color:var(--muted)}
+.done{background:var(--hull);border:1px solid var(--ok);border-radius:14px;padding:28px;display:grid;gap:12px}
+.done h3{font-size:24px;color:var(--ok)}
+.done p{margin:0}
+.coupon{font-family:var(--f-mono);font-size:20px;letter-spacing:.12em;background:var(--sea);border:1px dashed var(--lamp);color:var(--lamp);padding:12px;border-radius:8px;text-align:center}
+.linkbtn{background:none;border:0;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer;justify-self:start;padding:0}
+
+/* Roster */
+.roster-sec{border-top:1px solid var(--line)}
+.roster-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.roster-tools input[type=search],.roster-tools select{font:inherit;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-width:0}
+.roster-tools input[type=search]{flex:1 1 220px}
+.roster-tools .chk{font-size:13px;align-items:center}
+.roster-tools .chk input{margin:0}
+.btn-ghost{appearance:none;font:inherit;font-size:13px;font-weight:700;background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:9px 12px;cursor:pointer}
+.btn-ghost.danger{color:var(--err);border-color:currentColor}
+.btn-ghost:disabled{opacity:.4;cursor:not-allowed}
+.confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:1px solid var(--err);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin-bottom:10px}
+.stats b{color:var(--fg);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.table-wrap{position:relative;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--hull)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+.table-wrap th,.table-wrap td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.table-wrap th{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;background:var(--sea)}
+.table-wrap tbody tr:last-child td{border-bottom:0}
+.table-wrap td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.table-wrap td.empty{text-align:center;color:var(--muted);padding:28px 14px;white-space:normal}
+.sub-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.sub-head h3{margin-bottom:0}
+.cap-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.cap-bar .spacer{flex:1}
+.btn-sm{padding:9px 18px;font-size:14px}
+.cap-cell{display:grid;gap:4px}
+.cap-cell small{font-size:11px;color:var(--muted);font-family:var(--f-body)}
+.cap-in,.ed-sel{font:inherit;font-size:13px;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.cap-in{width:96px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cap-in:focus,.ed-sel:focus{border-color:var(--lamp);outline:none}
+.cap-in[aria-invalid=true]{border-color:var(--err)}
+.cap-of{color:var(--muted)}
+.ed-cell{display:flex;gap:6px}
+.row-acts{display:flex;gap:12px;align-items:center}
+.ed-save{background:var(--lamp);color:var(--lamp-ink);border:0;border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
+.table-wrap tr.editing td{background:rgba(242,184,75,.07)}
+.chg{font-size:11px;color:var(--lamp);margin-left:6px}
+/* 신청자 명단: 가로 스크롤 없이 너비에 맞춤, 좁은 화면에서는 카드형 */
+#roster .table-wrap{overflow-x:visible}
+#roster .table-wrap table{min-width:0}
+#roster .table-wrap th,#roster .table-wrap td{padding:10px 10px;white-space:normal}
+#roster .table-wrap th:first-child,#roster .table-wrap td:first-child{padding-left:14px}
+#roster .table-wrap td.num{white-space:nowrap}
+#roster .table-wrap td.date{white-space:normal;min-width:6.5em}
+#roster .row-acts{flex-wrap:nowrap}
+#roster .ed-cell{flex-wrap:wrap}
+@media (max-width:760px){
+  #roster .table-wrap thead{display:none}
+  #roster .table-wrap table,#roster .table-wrap tbody,#roster .table-wrap tr,#roster .table-wrap td{display:block;width:100%}
+  #roster .table-wrap tr{padding:10px 14px;border-bottom:1px solid var(--line)}
+  #roster .table-wrap tbody tr:last-child{border-bottom:0}
+  #roster .table-wrap td,#roster .table-wrap td:first-child{border:0;padding:3px 0;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;white-space:normal}
+  #roster .table-wrap td::before{content:attr(data-label);flex:0 0 80px;color:var(--muted);font-size:12px;font-family:var(--f-body)}
+  #roster .chg{margin-left:0}
+  #roster .table-wrap td.empty{display:block;padding:20px 0}
+  #roster .table-wrap td.empty::before{content:none}
+}
+/* 관리자 로그인 */
+.login{padding-block:56px 80px}
+.login-card{max-width:400px;margin:0 auto;background:var(--hull);border:1px solid var(--line);border-radius:14px;padding:28px 24px;display:grid;gap:16px}
+.login-card h2{font-size:26px}
+.login-card p{margin:0;color:var(--muted);font-size:13px}
+.login-in{width:100%;font:inherit;font-size:15px;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:11px 14px}
+.login-in:focus{border-color:var(--lamp);outline:none}
+.login-in[aria-invalid=true]{border-color:var(--err)}
+.pw-row{position:relative}
+.pw-row .login-in{padding-right:64px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);font:inherit;font-size:12px;font-weight:700;padding:6px 8px;cursor:pointer}
+.login-card .btn{justify-content:center}
+.login-card .login-err{color:var(--err);font-size:13px;margin:0}
+.tab-logout{background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer}
+.tab-logout:hover{color:var(--fg)}
+.sub-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin-top:12px;font-size:13px;color:var(--muted)}
+.pg-info{font-variant-numeric:tabular-nums}
+.pg-btns{display:flex;gap:4px;flex-wrap:wrap}
+.pg-btns button,.pg-go{min-width:34px;height:34px;padding:0 10px;border:1px solid var(--line);background:none;color:var(--fg);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pg-go{font-family:var(--f-body);font-weight:700}
+.pg-btns button[aria-current=page]{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:700}
+.pg-btns button:disabled{opacity:.35;cursor:not-allowed}
+.pg-gap{align-self:center;padding:0 4px}
+.pg-jump{display:flex;align-items:center;gap:6px}
+.pg-in{width:64px;height:34px;font:inherit;font-size:13px;font-family:var(--f-mono);background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:0 8px}
+.pg-in:focus{border-color:var(--lamp);outline:none}
+.add-ch{justify-self:start;background:none;border:1px dashed var(--line);color:var(--lamp);border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.add-ch:disabled{opacity:.4;cursor:not-allowed}
+.srv-add{margin-top:14px;background:var(--sea);border:1px dashed var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
+.srv-add h4{margin:0;font-size:14px;font-family:var(--f-display)}
+.srv-add-grid{display:grid;grid-template-columns:1.4fr 2fr .9fr .8fr 1fr auto;gap:10px;align-items:end}
+@media (max-width:820px){.srv-add-grid{grid-template-columns:1fr 1fr}}
+.srv-add label{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.srv-add input,.srv-add select{font:inherit;font-size:13px;background:var(--hull);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:0 9px;height:36px;min-width:0;width:100%}
+.srv-add input:focus,.srv-add select:focus{border-color:var(--lamp);outline:none}
+.srv-add .warn{margin:0}
+.row-edit,.ed-cancel,.row-del{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline}
+.row-del:hover{color:var(--err)}
+.yes{color:var(--ok)}
+.warn{color:var(--err);font-size:13px;margin:0 0 12px}
+/* Top nav & admin */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--sea)}
+.topnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:8;background:rgba(11,26,34,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topnav .wrap{display:flex;align-items:center;gap:16px;min-height:54px}
+.brand{font-family:var(--f-display);font-weight:900;font-size:18px;margin-right:auto;color:var(--fg);text-decoration:none}
+.tabs{display:flex;gap:4px}
+.tabs a{color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;padding:8px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
+.tabs a[aria-current=page]{color:var(--lamp-ink);background:var(--lamp)}
+.tabs a:not([aria-current=page]):hover{color:var(--fg);background:var(--hull)}
+section[id],#roster{scroll-margin-top:64px}
+.admin{padding-block:40px 64px}
+.admin>.wrap{display:grid;gap:40px}
+.admin>.wrap>*{min-width:0}
+.admin .sec-head{margin-bottom:0}
+.admin h3{font-size:20px;margin-bottom:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:560px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--hull);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:2px;min-width:0}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi b{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.kpi small{font-size:12px;color:var(--muted)}
+.admin-note{font-size:12px;color:var(--muted);margin:0 0 12px}
+.cell-full{color:var(--err)}
+.mine{color:var(--lamp)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Route milestones */
+.route{display:grid;gap:18px}
+.tally{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tally b{font-family:var(--f-mono);font-size:34px;font-variant-numeric:tabular-nums;color:var(--lamp)}
+.tally span{color:var(--muted);font-size:13px}
+.bar{height:8px;background:var(--hull);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#c98a25,var(--lamp));width:0;transition:width .8s ease}
+.stops{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.stops li{display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.stops li:last-child{border-bottom:0}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);justify-self:center}
+.stops li.hit .dot{background:var(--lamp);border-color:var(--lamp);box-shadow:0 0 12px var(--lamp)}
+.stops .goal{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stops .rw{font-weight:500}
+.stops .st{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.stops li.hit .st{border-color:var(--lamp);color:var(--lamp)}
+
+/* Features */
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+@media (max-width:820px){.feats{grid-template-columns:1fr}}
+.feat{display:grid;gap:10px;align-content:start;border-top:2px solid var(--lamp);padding-top:16px}
+.feat .k{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.feat h3{font-size:21px}
+.feat p{margin:0;color:var(--muted)}
+.bg-alt{background:var(--hull);border-block:1px solid var(--line)}
+
+/* Notice */
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{cursor:pointer;font-weight:700}
+details ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+footer{padding-block:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+
+/* Mobile sticky CTA */
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:5;background:rgba(11,26,34,.94);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:none}
+.sticky .btn{width:100%;justify-content:center}
+@media (max-width:640px){.sticky{display:block}footer{padding-bottom:96px}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--sea);padding:10px 16px;border-radius:8px;font-weight:500;font-size:14px;z-index:9}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<nav class="topnav" aria-label="페이지 전환"><div class="wrap">
+  <a class="brand" href="#home">등불항로</a>
+  <div class="tabs">
+    <a href="#home" data-view="home">사전예약</a>
+    <a href="#admin" data-view="admin">관리자</a>
+    <button type="button" class="tab-logout" id="logout" hidden>로그아웃</button>
+  </div>
+</div></nav>
+<div id="view-home">
+<header class="hero">
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="hero-top"><span class="eyebrow">모바일 해양 탐험 RPG</span><span class="sample">예시 페이지 · 가상의 게임</span></div>
+    <h1>등불항로<small>LANTERN ROUTE</small></h1>
+    <p class="lede">안개에 잠긴 군도를 등불 하나로 밝혀 나가는 항해 RPG. 선원을 모으고, 꺼진 등대를 다시 켜고, 지도에 없는 섬을 기록하세요.</p>
+    <div class="launch">
+      <div class="count" id="count" aria-label="출시까지 남은 시간">
+        <div><b id="cd-d">00</b><span>일</span></div>
+        <div><b id="cd-h">00</b><span>시간</span></div>
+        <div><b id="cd-m">00</b><span>분</span></div>
+        <div><b id="cd-s">00</b><span>초</span></div>
+      </div>
+      <div class="launch-meta"><strong>2026.12.17 (목) 정식 출시</strong>iOS · Android 동시 출시 예정</div>
+    </div>
+    <div><a class="btn" href="#reserve">사전예약하고 보상 받기 →</a></div>
+  </div>
+</header>
+
+<main>
+  <section id="reserve">
+    <div class="wrap grid2">
+      <div>
+        <div class="sec-head">
+          <span class="eyebrow">사전예약</span>
+          <h2>출항 전에 이름을 올려 두세요</h2>
+          <p>출시 당일 문자로 쿠폰 번호를 보내드립니다.</p>
+        </div>
+        <form id="form" novalidate>
+          <fieldset>
+            <legend>플랫폼</legend>
+            <div class="seg">
+              <input type="radio" name="os" id="os-a" value="Android" checked><label for="os-a">Android</label>
+              <input type="radio" name="os" id="os-i" value="iOS"><label for="os-i">iOS</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>서버</legend>
+            <div class="seg srv" id="servers"></div>
+            <span class="hint">출시 후 서버 이전은 1회 무료로 지원합니다.</span>
+          </fieldset>
+          <fieldset>
+            <legend>채널 <span id="ch-server" style="font-weight:500"></span></legend>
+            <div class="chs" id="channels"></div>
+            <span class="hint">같은 채널 사전예약자끼리 출시 당일 같은 항구에서 시작합니다. 채널 정원이 차면 마감됩니다.</span>
+          </fieldset>
+          <div class="field">
+            <label class="lb" for="phone">휴대폰 번호</label>
+            <input type="tel" id="phone" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" maxlength="13" aria-describedby="phone-hint">
+            <span class="hint" id="phone-hint">본인 명의 번호 1개당 1회 참여할 수 있습니다.</span>
+          </div>
+          <div class="agree">
+            <label class="chk all"><input type="checkbox" id="ag-all">전체 동의</label>
+            <label class="chk"><input type="checkbox" id="ag-age" class="ag req-ag"><span><span class="tag req">필수</span>만 14세 이상입니다</span></label>
+            <label class="chk"><input type="checkbox" id="ag-privacy" class="ag req-ag"><span><span class="tag req">필수</span>개인정보 수집·이용 동의 (휴대폰 번호, 보관: 쿠폰 발송 후 30일)</span></label>
+            <label class="chk"><input type="checkbox" id="ag-mkt" class="ag"><span><span class="tag opt">선택</span>이벤트·업데이트 소식 문자 수신</span></label>
+          </div>
+          <button class="btn" type="submit" id="submit" disabled>사전예약 완료하기</button>
+        </form>
+        <div class="done" id="done" hidden>
+          <h3>사전예약이 완료되었습니다</h3>
+          <p id="done-msg"></p>
+          <div class="coupon" id="coupon">LNTN-0000-0000</div>
+          <p class="hint">위 번호는 예시입니다. 실제 쿠폰은 출시 당일 문자로 발송됩니다.</p>
+          <a class="linkbtn" href="#admin">관리자 페이지에서 명단 확인하기</a>
+          <button type="button" class="linkbtn" id="again">다른 번호로 다시 해 보기</button>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="sec-head">
+          <span class="eyebrow">누적 보상 항로</span>
+          <h2>예약자가 늘수록 보상이 커집니다</h2>
+          <p>달성한 단계의 보상은 사전예약자 전원에게 지급됩니다.</p>
+        </div>
+        <div class="tally"><b id="total">0</b><span>명 참여 (예시 수치)</span></div>
+        <div class="bar" role="progressbar" aria-label="100만 명 목표 대비 진행률" aria-valuemin="0" aria-valuemax="1000000" id="bar"><i id="bar-fill"></i></div>
+        <ol class="stops" id="stops"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-alt">
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">게임 소개</span><h2>항해일지에 남길 세 가지</h2></div>
+      <div class="feats">
+        <div class="feat"><span class="k">항로 개척</span><h3>안개를 걷어내는 탐험</h3><p>등불 반경만큼만 보이는 바다. 연료를 아껴 쓸지, 멀리 비출지 매 항해마다 선택합니다.</p></div>
+        <div class="feat"><span class="k">선원 편성</span><h3>40명의 선원, 5개 직책</h3><p>항해사·포수·요리사·측량사·등불지기를 조합해 배마다 다른 전술을 꾸립니다.</p></div>
+        <div class="feat"><span class="k">등대 복원</span><h3>함께 켜는 서버 등대</h3><p>길드원이 모은 기름으로 꺼진 등대를 밝히면 서버 전체 항로가 열립니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">유의사항</span><h2>참여 전에 확인해 주세요</h2></div>
+      <details open><summary>보상 지급 안내</summary><ul>
+        <li>쿠폰은 정식 출시일(2026.12.17)에 입력하신 번호로 문자 발송됩니다.</li>
+        <li>쿠폰 사용 기한은 2027.01.31까지이며, 계정당 1회 사용할 수 있습니다.</li>
+        <li>누적 보상은 출시 시점의 최종 참여자 수 기준으로 지급됩니다.</li>
+      </ul></details>
+      <details><summary>개인정보 처리</summary><ul>
+        <li>수집 항목: 휴대폰 번호, 플랫폼 정보</li>
+        <li>이용 목적: 사전예약 보상 쿠폰 발송</li>
+        <li>보유 기간: 쿠폰 발송 후 30일 뒤 파기</li>
+        <li>예시 페이지의 저장 위치: 이 브라우저의 로컬 저장소(관리자 페이지에서 삭제 가능)</li>
+      </ul></details>
+      <details><summary>기타</summary><ul>
+        <li>이 페이지는 가상의 게임으로 만든 예시이며, 입력한 정보는 서버로 전송되지 않고 이 브라우저에만 임시 저장됩니다.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+</div>
+
+<main id="view-login" class="login" hidden>
+  <div class="wrap">
+    <form class="login-card" id="login-form" novalidate>
+      <span class="eyebrow">관리자</span>
+      <h2>관리자 로그인</h2>
+      <p>관리자 계정으로 로그인해야 신청자 명단과 서버·채널 관리 화면을 볼 수 있습니다.</p>
+      <div class="field">
+        <label class="lb" for="admin-id">아이디</label>
+        <input class="login-in" id="admin-id" autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="lb" for="admin-pw">비밀번호</label>
+        <div class="pw-row">
+          <input class="login-in" type="password" id="admin-pw" autocomplete="current-password">
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-pressed="false">보기</button>
+        </div>
+      </div>
+      <p class="login-err" id="login-err" role="alert" hidden></p>
+      <button class="btn" type="submit" id="login-btn">로그인</button>
+    </form>
+  </div>
+</main>
+
+<main id="view-admin" class="admin" hidden>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">관리자</span>
+      <h2>사전예약 관리</h2>
+    </div>
+    <p class="warn" id="storage-warn" hidden>이 브라우저에서는 저장소를 쓸 수 없어, 새로 고치면 명단이 사라집니다.</p>
+    <div class="kpis" id="kpis"></div>
+
+    <div>
+      <div class="sub-head">
+        <h3>서버 · 채널 현황</h3>
+        <div class="sub-actions"><button type="button" class="btn-ghost" id="ch-csv">CSV 다운로드</button><button type="button" class="btn-ghost" id="cap-edit">정원 · 채널 수정</button></div>
+      </div>
+      <p class="admin-note" id="ch-note"></p>
+      <p class="warn" id="cap-err" hidden></p>
+      <div class="table-wrap">
+        <table>
+          <thead id="ch-head"></thead>
+          <tbody id="ch-body"></tbody>
+        </table>
+      </div>
+      <nav class="pager" id="ch-pager" aria-label="서버 · 채널 현황 페이지"></nav>
+      <form class="srv-add" id="srv-add" hidden novalidate>
+        <h4>서버 추가</h4>
+        <div class="srv-add-grid">
+          <label>서버 이름<input id="na-name" maxlength="10" placeholder="예: 은빛여울" autocomplete="off"></label>
+          <label>설명<input id="na-desc" maxlength="20" placeholder="예: 신규 이벤트 서버" autocomplete="off"></label>
+          <label>상태<select id="na-tag"><option value="new">신규</option><option value="ok">원활</option><option value="busy">혼잡</option></select></label>
+          <label>채널 수<input type="number" id="na-ch" min="1" max="10" step="1" value="4"></label>
+          <label>채널 정원<input type="number" id="na-cap" min="1" max="99999" step="1" value="5000"></label>
+          <button type="submit" class="btn-ghost">서버 추가</button>
+        </div>
+        <p class="warn" id="na-err" hidden></p>
+      </form>
+      <div class="cap-bar" id="cap-bar" hidden>
+        <button type="button" class="btn-ghost" id="cap-reset">모두 기본값 5,000명으로</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn-ghost" id="cap-cancel">취소</button>
+        <button type="button" class="btn btn-sm" id="cap-save">변경 사항 저장</button>
+      </div>
+    </div>
+
+    <div id="roster">
+      <h3>신청자 명단</h3>
+      <p class="admin-note">연락처 가운데 4자리는 블라인드 처리됩니다. 명단은 이 브라우저의 로컬 저장소에만 있습니다.</p>
+      <div class="roster-tools">
+        <input type="search" id="roster-q" placeholder="번호 뒤 4자리 또는 서버 이름으로 검색" aria-label="명단 검색">
+        <select id="roster-srv" aria-label="서버로 거르기"><option value="">전체 서버</option></select>
+        <button type="button" class="btn-ghost" id="roster-csv">CSV 다운로드</button>
+        <button type="button" class="btn-ghost danger" id="roster-clear">명단 전체 삭제</button>
+      </div>
+      <div class="confirm" id="roster-confirm" hidden>
+        <span id="roster-confirm-msg"></span>
+        <button type="button" class="btn-ghost danger" id="roster-confirm-yes">삭제</button>
+        <button type="button" class="btn-ghost" id="roster-confirm-no">취소</button>
+      </div>
+      <div class="stats" id="roster-stats"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>No.</th><th>신청 일시</th><th>휴대폰 번호</th><th>플랫폼</th><th>서버 · 채널</th><th>마케팅 수신</th><th>쿠폰 번호</th><th><span class="sr">관리</span></th></tr></thead>
+          <tbody id="roster-body"></tbody>
+        </table>
+      </div>
+      <nav class="pager" id="roster-pager" aria-label="신청자 명단 페이지"></nav>
+    </div>
+  </div>
+</main>
+<footer><div class="wrap">© 2026 Example Studio · 등불항로는 가상의 게임입니다 · 게임물 등급 분류 예정</div></footer>
+
+<div class="sticky" id="sticky"><a class="btn" href="#reserve">사전예약하기</a></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const LAUNCH = new Date('2026-12-17T00:00:00+09:00').getTime();
+  const pad = n => String(n).padStart(2,'0');
+  const $ = id => document.getElementById(id);
+
+  // 관리자 계정 (예시용) — 아래 로그인 처리에서 사용
+  const ADMIN_HASH = '43f263bb6ddceba7241be540c23213b36e332d65a39f5a9f0860a010cc43a423';  // SHA-256('lantern-admin|아이디:비밀번호')
+  const AUTH_KEY = 'lantern-admin-auth', MAX_TRY = 5, LOCK_SEC = 30;
+  let memAuth = false, fails = 0, lockUntil = 0, lockTimer;
+
+  // Browser storage (이 브라우저 전용 임시 저장소: 탭·창을 닫아도 유지)
+  const KEY = 'lantern-prereg-v1';
+  let storageOK = true;
+  function load(){
+    try {
+      const a = JSON.parse(localStorage.getItem(KEY) || '[]');
+      return Array.isArray(a) ? a : [];
+    } catch (e) { storageOK = false; return []; }
+  }
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(entries)); }
+    catch (e) { storageOK = false; }
+    $('storage-warn').hidden = storageOK;
+  }
+  let entries = load();
+
+  function tick(){
+    let s = Math.max(0, Math.floor((LAUNCH - Date.now())/1000));
+    $('cd-d').textContent = pad(Math.floor(s/86400)); s%=86400;
+    $('cd-h').textContent = pad(Math.floor(s/3600)); s%=3600;
+    $('cd-m').textContent = pad(Math.floor(s/60));
+    $('cd-s').textContent = pad(s%60);
+  }
+  tick(); setInterval(tick,1000);
+
+  // Milestones
+  const STOPS = [
+    {g:100000, r:'골드 30,000 · 등불 기름 5통'},
+    {g:300000, r:'5성 선원 선택권 1장'},
+    {g:500000, r:'한정 선박 외형 「호박빛 범선」'},
+    {g:1000000, r:'전설 등불 「첫 번째 불씨」'}
+  ];
+  const BASE_TOTAL = 742318;
+  let total = BASE_TOTAL + entries.length;
+  const fmt = n => n.toLocaleString('ko-KR');
+  function render(){
+    $('total').textContent = fmt(total);
+    $('bar-fill').style.width = Math.min(100, total/10000) + '%';
+    $('bar').setAttribute('aria-valuenow', total);
+    $('stops').innerHTML = STOPS.map(s => {
+      const hit = total >= s.g;
+      return `<li class="${hit?'hit':''}"><span class="dot"></span><div><div class="goal">${fmt(s.g)}명</div><div class="rw">${s.r}</div></div><span class="st">${hit?'달성':'남은 '+fmt(s.g-total)+'명'}</span></li>`;
+    }).join('');
+  }
+  render();
+
+  // Form
+  const phone = $('phone'), hint = $('phone-hint'), submit = $('submit');
+  const reqs = [...document.querySelectorAll('.req-ag')], all = $('ag-all'), ags = [...document.querySelectorAll('.ag')];
+  // Servers & channels (예시 데이터: 채널별 예약 인원, 정원은 관리자 페이지에서 수정해 로컬 저장소에 보관)
+  const DEFAULT_CAP = 5000;
+  const CAPS_KEY = 'lantern-prereg-caps-v1';       // v3에서 쓰던 정원 저장 키 (처음 한 번 옮겨 옴)
+  const CONFIG_KEY = 'lantern-prereg-servers-v1';  // 서버·채널 구성과 정원
+  const MAX_CH = 10, MAX_SRV = 8;
+  const TAGS = {new:'신규', ok:'원활', busy:'혼잡'};
+  const DEFAULT_SERVERS = [
+    {id:'north', name:'북등대', desc:'신규 서버 · 첫 출항 보너스', tag:['new','신규'], base:[812,1340,2205,640]},
+    {id:'coral', name:'산호만', desc:'초보 선장 추천', tag:['ok','원활'], base:[3120,2876,3540,2410]},
+    {id:'fog', name:'안개곶', desc:'길드 경쟁 중심', tag:['busy','혼잡'], base:[5000,4980,5000,4630]}
+  ];
+  const SERVERS = [];
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const validSrv = x => x && typeof x.id === 'string' && typeof x.name === 'string' && Array.isArray(x.tag) && TAGS[x.tag[0]]
+    && Array.isArray(x.base) && x.base.length >= 1 && x.base.every(n => Number.isInteger(n) && n >= 0)
+    && Array.isArray(x.cap) && x.cap.length === x.base.length && x.cap.every(n => Number.isInteger(n) && n > 0);
+  function loadConfig(){
+    let cfg = null;
+    try { cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || 'null'); } catch (e) {}
+    if (cfg && Array.isArray(cfg.servers) && cfg.servers.length && cfg.servers.every(validSrv)){
+      SERVERS.splice(0, SERVERS.length, ...cfg.servers.map(x => ({id:x.id, name:x.name, desc:x.desc || '', tag:[x.tag[0], TAGS[x.tag[0]]], base:[...x.base], cap:[...x.cap], ch:[...x.base]})));
+      return;
+    }
+    let oldCaps = {};
+    try { oldCaps = JSON.parse(localStorage.getItem(CAPS_KEY) || '{}') || {}; } catch (e) {}
+    SERVERS.splice(0, SERVERS.length, ...DEFAULT_SERVERS.map(x => {
+      const c = oldCaps[x.id];
+      const cap = Array.isArray(c) && c.length === x.base.length && c.every(n => Number.isInteger(n) && n > 0) ? [...c] : x.base.map(() => DEFAULT_CAP);
+      return {...x, tag:[...x.tag], base:[...x.base], cap, ch:[...x.base]};
+    }));
+  }
+  function saveConfig(){
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify({servers: SERVERS.map(({id,name,desc,tag,base,cap}) => ({id,name,desc,tag,base,cap}))})); }
+    catch (e) { storageOK = false; }
+  }
+  loadConfig();
+  // 기본 인원 + 저장된 신청 내역으로 참여자 수와 채널 인원을 다시 계산
+  function recount(){
+    SERVERS.forEach(s => s.ch = [...s.base]);
+    entries.forEach(e => {
+      const s = SERVERS.find(x => x.id === e.server);
+      if (s && s.ch[e.ch-1] != null) s.ch[e.ch-1] += 1;
+    });
+    total = BASE_TOTAL + entries.length;
+  }
+  recount();
+  const srvName = id => (SERVERS.find(s => s.id === id) || {name:id}).name;
+  const srvBox = $('servers'), chBox = $('channels');
+  function renderServers(){
+    const cur = document.querySelector('input[name=srv]:checked')?.value;
+    const keep = SERVERS.some(s => s.id === cur) ? cur : SERVERS[0].id;
+    srvBox.innerHTML = SERVERS.map(s => `<input type="radio" name="srv" id="srv-${esc(s.id)}" value="${esc(s.id)}"${s.id === keep ? ' checked' : ''}><label for="srv-${esc(s.id)}"><span class="pill ${s.tag[0]}">${s.tag[1]}</span><b>${esc(s.name)}</b><small>${esc(s.desc)}</small></label>`).join('');
+  }
+  renderServers();
+  const curSrv = () => SERVERS.find(s => s.id === document.querySelector('input[name=srv]:checked').value);
+  function renderCh(){
+    const s = curSrv();
+    $('ch-server').textContent = `· ${s.name}`;
+    const firstOpen = s.ch.findIndex((n,i) => n < s.cap[i]);
+    chBox.innerHTML = s.ch.map((n,i) => {
+      const full = n >= s.cap[i];
+      return `<input type="radio" name="ch" id="ch-${i+1}" value="${i+1}"${full?' disabled':''}${i===firstOpen?' checked':''}><label for="ch-${i+1}">${i+1}채널<small>${full?'마감':fmt(n)+'명'}</small><span class="meter"><i style="width:${Math.min(100,n/s.cap[i]*100)}%"></i></span></label>`;
+    }).join('');
+  }
+  renderCh();
+  srvBox.addEventListener('change', () => { renderCh(); update(); });
+  chBox.addEventListener('change', () => update());
+  const curCh = () => document.querySelector('input[name=ch]:checked');
+
+  const digits = () => phone.value.replace(/\D/g,'');
+  const validPhone = () => /^01[016789]\d{7,8}$/.test(digits());
+  function update(){
+    submit.disabled = !(validPhone() && curCh() && reqs.every(c => c.checked));
+    all.checked = ags.every(c => c.checked);
+  }
+  phone.addEventListener('input', () => {
+    const d = digits().slice(0,11);
+    phone.value = d.length < 4 ? d : d.length < 8 ? `${d.slice(0,3)}-${d.slice(3)}` : `${d.slice(0,3)}-${d.slice(3,d.length-4)}-${d.slice(-4)}`;
+    phone.removeAttribute('aria-invalid'); hint.classList.remove('err');
+    hint.textContent = '본인 명의 번호 1개당 1회 참여할 수 있습니다.';
+    update();
+  });
+  phone.addEventListener('blur', () => {
+    if (phone.value && !validPhone()){
+      phone.setAttribute('aria-invalid','true'); hint.classList.add('err');
+      hint.textContent = '010으로 시작하는 10~11자리 번호를 입력해 주세요.';
+    }
+  });
+  all.addEventListener('change', () => { ags.forEach(c => c.checked = all.checked); update(); });
+  ags.forEach(c => c.addEventListener('change', update));
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (submit.disabled) return;
+    if (entries.some(x => x.phone === digits())){ showToast('이미 사전예약한 번호입니다'); return; }
+    const os = document.querySelector('input[name=os]:checked').value;
+    const srv = curSrv(), chNo = Number(curCh().value);
+    if (srv.ch[chNo-1] >= srv.cap[chNo-1]){ showToast('방금 마감된 채널입니다. 다른 채널을 선택해 주세요'); renderCh(); update(); return; }
+    const r = () => Math.random().toString(36).slice(2,6).toUpperCase().padEnd(4,'X');
+    const coupon = `LNTN-${r()}-${r()}`;
+    const before = total;
+    entries.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      at: new Date().toISOString(), phone: digits(), os,
+      server: srv.id, ch: chNo, mkt: $('ag-mkt').checked, coupon
+    });
+    save(); recount(); render(); renderRoster();
+    const crossed = STOPS.find(s => before < s.g && total >= s.g);
+    const masked = phone.value.replace(/-(\d{3,4})-/, '-****-');
+    $('done-msg').textContent = `${masked} (${os}) 번호로 출시 당일 쿠폰을 보내드립니다. 시작 위치는 ${srv.name} 서버 ${chNo}채널입니다.` + ($('ag-mkt').checked ? ' 이벤트 소식도 함께 받습니다.' : '');
+    $('coupon').textContent = coupon;
+    $('form').hidden = true; $('done').hidden = false;
+    showToast(crossed ? `${fmt(crossed.g)}명 보상 달성!` : '사전예약 완료');
+  });
+  $('again').addEventListener('click', () => {
+    $('form').reset(); renderCh(); $('form').hidden = false; $('done').hidden = true; update(); phone.focus();
+  });
+
+  // Roster (신청자 명단)
+  const maskPhone = d => `${d.slice(0,3)}-****-${d.slice(-4)}`;
+  const fmtDate = iso => {
+    const t = new Date(iso), p = n => String(n).padStart(2,'0');
+    return `${t.getFullYear()}.${p(t.getMonth()+1)}.${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
+  };
+  function renderSrvFilter(){
+    const sel = $('roster-srv'), cur = sel.value;
+    sel.innerHTML = '<option value="">전체 서버</option>' + SERVERS.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+    sel.value = SERVERS.some(s => s.id === cur) ? cur : '';
+  }
+  renderSrvFilter();
+  function renderRoster(){
+    if (!isAuthed()){ $('roster-body').innerHTML = ''; $('roster-stats').innerHTML = ''; renderStats(); return; }   // 로그인 전에는 명단을 그리지 않음
+    const q = $('roster-q').value.trim(), qd = q.replace(/\D/g,'');
+    const sf = $('roster-srv').value;
+    const rows = entries
+      .map((e,i) => ({...e, no: i+1}))
+      .reverse()
+      .filter(e => (!sf || e.server === sf) && (!q || (qd && e.phone.slice(-4).includes(qd)) || srvName(e.server).includes(q)));
+    const cnt = f => entries.filter(f).length;
+    $('roster-stats').innerHTML = `<span>전체 <b>${fmt(entries.length)}</b>건</span><span>Android <b>${cnt(e=>e.os==='Android')}</b></span><span>iOS <b>${cnt(e=>e.os==='iOS')}</b></span><span>마케팅 수신 동의 <b>${cnt(e=>e.mkt)}</b></span>` + (rows.length !== entries.length ? `<span>검색 결과 <b>${rows.length}</b>건</span>` : '');
+    const rPages = Math.max(1, Math.ceil(rows.length / PAGE));
+    rosterPage = Math.min(Math.max(1, rosterPage), rPages);
+    $('roster-body').innerHTML = !entries.length
+      ? `<tr><td class="empty" colspan="8">아직 신청 내역이 없습니다. 위 폼에서 사전예약하면 이곳에 쌓입니다.</td></tr>`
+      : !rows.length
+      ? `<tr><td class="empty" colspan="8">검색 조건에 맞는 신청이 없습니다.</td></tr>`
+      : rows.slice((rosterPage - 1) * PAGE, rosterPage * PAGE).map(e => e.id === editingId ? `<tr class="editing">
+          <td class="num">${e.no}</td>
+          <td class="num date">${fmtDate(e.at)}</td>
+          <td class="num">${maskPhone(e.phone)}</td>
+          <td><select class="ed-sel" id="ed-os" aria-label="변경할 플랫폼">${['Android','iOS'].map(o => `<option value="${o}"${o === e.os ? ' selected' : ''}>${o}</option>`).join('')}</select></td>
+          <td><div class="ed-cell">
+            <select class="ed-sel" id="ed-srv" aria-label="변경할 서버">${SERVERS.map(s => `<option value="${esc(s.id)}"${s.id === e.server ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>
+            <select class="ed-sel" id="ed-ch" aria-label="변경할 채널"></select>
+          </div></td>
+          <td class="${e.mkt?'yes':''}">${e.mkt ? '동의' : '미동의'}</td>
+          <td class="num">${e.coupon}</td>
+          <td><div class="row-acts"><button type="button" class="ed-save">저장</button><button type="button" class="ed-cancel">취소</button></div></td>
+        </tr>` : `<tr>
+          <td class="num">${e.no}</td>
+          <td class="num date">${fmtDate(e.at)}</td>
+          <td class="num">${maskPhone(e.phone)}</td>
+          <td>${e.os}</td>
+          <td>${esc(srvName(e.server))} · ${e.ch}채널${e.updatedAt ? '<span class="chg">변경됨</span>' : ''}</td>
+          <td class="${e.mkt?'yes':''}">${e.mkt ? '동의' : '미동의'}</td>
+          <td class="num">${e.coupon}</td>
+          <td><div class="row-acts"><button type="button" class="row-edit" data-id="${e.id}" aria-label="${e.no}번 신청 서버·채널·플랫폼 변경">변경</button><button type="button" class="row-del" data-id="${e.id}" aria-label="${e.no}번 신청 삭제">삭제</button></div></td>
+        </tr>`).join('');
+    if (editingId && $('ed-ch')) fillEdCh($('ed-srv').value);
+    const labels = [...document.querySelectorAll('#roster thead th')].map(th => th.textContent.trim());
+    $('roster-body').querySelectorAll('tr').forEach(tr => [...tr.children].forEach((td, i) => { td.dataset.label = labels[i] || ''; }));
+    $('roster-clear').disabled = !entries.length;
+    $('roster-csv').disabled = !entries.length;
+    renderPager('roster-pager', rows.length, rosterPage, '건');
+    $('storage-warn').hidden = storageOK;
+    renderStats();
+  }
+  function renderStats(){
+    const n = entries.length, cnt = f => entries.filter(f).length;
+    const and = cnt(e => e.os === 'Android'), ios = cnt(e => e.os === 'iOS'), mkt = cnt(e => e.mkt);
+    const today = new Date().toDateString();
+    $('kpis').innerHTML = `
+      <div class="kpi"><span>누적 참여자</span><b>${fmt(total)}</b><small>예시 기준값 포함</small></div>
+      <div class="kpi"><span>Android / iOS</span><b>${and} / ${ios}</b><small>이 브라우저 신청 기준</small></div>
+      <div class="kpi"><span>마케팅 수신 동의</span><b>${n ? Math.round(mkt / n * 100) : 0}%</b><small>${mkt}건 / ${n}건</small></div>`;
+    if (!capEdit) renderChTable();
+  }
+
+  // 서버·채널 구성과 정원 수정 (수정 중에는 사본(draft)에서 작업하고, 저장할 때 한꺼번에 반영)
+  const PAGE = 5;                 // 박스당 한 페이지에 보여 줄 줄 수
+  let chPage = 1, rosterPage = 1;
+  let capEdit = false, draft = [];
+  const sum = a => a.reduce((x,y) => x+y, 0);
+  const mineOf = (sid, no) => entries.filter(e => e.server === sid && e.ch === no).length;
+  const countOf = (s, i) => (s.base[i] || 0) + mineOf(s.id, i+1);
+  function renderChTable(){
+    const list = capEdit ? draft : SERVERS;
+    const maxCh = Math.max(...list.map(s => s.base.length));
+    const cols = Array.from({length: maxCh}, (_, i) => i);
+    $('ch-head').innerHTML = `<tr><th>서버</th>${cols.map(i => `<th>${i+1}채널</th>`).join('')}<th>합계</th></tr>`;
+    const chPages = Math.max(1, Math.ceil(list.length / PAGE));
+    chPage = Math.min(Math.max(1, chPage), chPages);
+    const chStart = (chPage - 1) * PAGE;
+    $('ch-body').innerHTML = list.slice(chStart, chStart + PAGE).map((s, k) => {
+      const si = chStart + k;
+      const counts = s.base.map((_, i) => countOf(s, i));
+      const cells = cols.map(i => {
+        if (i >= s.base.length) return '<td class="cap-of">—</td>';
+        const v = counts[i], cap = s.cap[i], mine = mineOf(s.id, i+1);
+        if (capEdit){
+          const isNewCh = i >= s.orig;
+          return `<td><div class="cap-cell"><input type="number" class="cap-in" id="cap-${si}-${i+1}" data-s="${si}" data-i="${i}" min="${Math.max(1, v)}" max="99999" step="1" value="${esc(cap)}" aria-label="${esc(s.name)} ${i+1}채널 정원"><small>${isNewCh ? '<span class="chg" style="margin:0">새 채널</span>' : `현재 ${fmt(v)}명`}</small></div></td>`;
+        }
+        const full = v >= cap;
+        return `<td class="num ${full ? 'cell-full' : ''}">${full ? '마감 · ' : ''}${fmt(v)}<span class="cap-of"> / ${fmt(cap)}</span>${mine ? ` <span class="mine">+${mine}</span>` : ''}</td>`;
+      }).join('');
+      const capSum = sum(s.cap.map(c => Number(c) || 0));
+      const nameCell = capEdit
+        ? `<div class="cap-cell"><span>${esc(s.name)}${s.isNew ? '<span class="chg">새 서버</span>' : ''}</span><button type="button" class="add-ch" data-s="${si}"${s.base.length >= MAX_CH ? ' disabled' : ''} aria-label="${esc(s.name)}에 채널 추가">+ 채널</button></div>`
+        : esc(s.name);
+      return `<tr><td>${nameCell}</td>${cells}<td class="num">${fmt(sum(counts))}<span class="cap-of"> / ${fmt(capSum)}</span></td></tr>`;
+    }).join('');
+    renderPager('ch-pager', list.length, chPage, '개 서버');
+    $('cap-bar').hidden = !capEdit;
+    $('srv-add').hidden = !capEdit;
+    $('cap-edit').hidden = capEdit;
+    $('ch-note').textContent = capEdit
+      ? `채널마다 정원을 입력하고, "+ 채널"이나 서버 추가로 구성을 늘릴 수 있습니다. 서버마다 채널은 ${MAX_CH}개, 서버는 ${MAX_SRV}개까지 둘 수 있습니다. 정원은 현재 인원보다 적게 정할 수 없습니다. 저장해야 반영됩니다.`
+      : '채널별 인원 / 정원입니다. 노란 숫자는 그중 이 브라우저에서 들어온 신청 건수입니다.';
+  }
+  $('cap-edit').addEventListener('click', () => {
+    draft = SERVERS.map(s => ({id:s.id, name:s.name, desc:s.desc, tag:[...s.tag], base:[...s.base], cap:[...s.cap], orig:s.base.length, isNew:false}));
+    capEdit = true; $('cap-err').hidden = true; $('na-err').hidden = true; renderChTable();
+    document.querySelector('.cap-in')?.focus();
+  });
+  $('ch-body').addEventListener('input', ev => {
+    const inp = ev.target.closest('.cap-in'); if (!inp) return;
+    draft[Number(inp.dataset.s)].cap[Number(inp.dataset.i)] = inp.value;
+  });
+  $('ch-body').addEventListener('click', ev => {
+    const b = ev.target.closest('.add-ch'); if (!b) return;
+    const si = Number(b.dataset.s), d = draft[si];
+    if (d.base.length >= MAX_CH) return;
+    d.base.push(0); d.cap.push(DEFAULT_CAP);
+    renderChTable();
+    $(`cap-${si}-${d.base.length}`)?.focus();
+  });
+  $('cap-cancel').addEventListener('click', () => { capEdit = false; draft = []; $('cap-err').hidden = true; renderChTable(); });
+  $('cap-reset').addEventListener('click', () => { draft.forEach(d => d.cap = d.cap.map(() => DEFAULT_CAP)); renderChTable(); });
+  $('srv-add').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const name = $('na-name').value.trim(), desc = $('na-desc').value.trim();
+    const chRaw = $('na-ch').value.trim(), capRaw = $('na-cap').value.trim();
+    let msg = '';
+    if (draft.length >= MAX_SRV) msg = `서버는 ${MAX_SRV}개까지 만들 수 있습니다.`;
+    else if (!name) msg = '서버 이름을 입력해 주세요.';
+    else if (draft.some(d => d.name === name)) msg = `"${name}" 서버가 이미 있습니다. 다른 이름을 입력해 주세요.`;
+    else if (!/^\d+$/.test(chRaw) || +chRaw < 1 || +chRaw > MAX_CH) msg = `채널 수는 1~${MAX_CH} 사이로 입력해 주세요.`;
+    else if (!/^\d+$/.test(capRaw) || +capRaw < 1 || +capRaw > 99999) msg = '채널 정원은 1~99,999 사이로 입력해 주세요.';
+    $('na-err').textContent = msg; $('na-err').hidden = !msg;
+    if (msg) return;
+    const tag = $('na-tag').value;
+    draft.push({id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2,5), name, desc, tag:[tag, TAGS[tag]],
+      base: Array(+chRaw).fill(0), cap: Array(+chRaw).fill(+capRaw), orig: 0, isNew: true});
+    $('srv-add').reset(); chPage = Math.ceil(draft.length / PAGE); renderChTable();
+    showToast(`${name} 서버를 추가했습니다. 저장해야 반영됩니다`);
+  });
+  $('cap-save').addEventListener('click', () => {
+    const errs = [], bad = [];
+    document.querySelectorAll('.cap-in').forEach(inp => inp.setAttribute('aria-invalid', 'false'));
+    draft.forEach((d, si) => d.cap.forEach((raw, i) => {
+      const t = String(raw).trim(), n = Number(t), v = countOf(d, i);
+      let msg = '';
+      if (!/^\d+$/.test(t)) msg = '숫자만 입력해 주세요';
+      else if (n < 1 || n > 99999) msg = '1~99,999 사이로 입력해 주세요';
+      else if (n < v) msg = `현재 인원 ${fmt(v)}명보다 적게 정할 수 없습니다`;
+      if (msg){ errs.push(`${d.name} ${i+1}채널: ${msg}`); bad.push([si, i]); }
+    }));
+    if (errs.length){
+      chPage = Math.floor(bad[0][0] / PAGE) + 1; renderChTable();   // 첫 오류가 있는 페이지로 이동
+      bad.forEach(([si, i]) => $(`cap-${si}-${i+1}`)?.setAttribute('aria-invalid', 'true'));
+      $('cap-err').textContent = errs.join(' · '); $('cap-err').hidden = false; return;
+    }
+    const newSrv = draft.filter(d => d.isNew).length;
+    const newCh = sum(draft.filter(d => !d.isNew).map(d => d.base.length - d.orig));
+    const capChanged = sum(draft.filter(d => !d.isNew).map(d => {
+      const old = SERVERS.find(s => s.id === d.id);
+      return d.cap.slice(0, d.orig).filter((c, i) => Number(c) !== old.cap[i]).length;
+    }));
+    SERVERS.splice(0, SERVERS.length, ...draft.map(d => ({id:d.id, name:d.name, desc:d.desc, tag:d.tag, base:[...d.base], cap:d.cap.map(Number), ch:[...d.base]})));
+    saveConfig(); capEdit = false; draft = []; $('cap-err').hidden = true;
+    renderServers(); renderSrvFilter(); refreshAll();
+    const parts = [newSrv && `서버 ${newSrv}개 추가`, newCh && `채널 ${newCh}개 추가`, capChanged && `정원 ${capChanged}곳 변경`].filter(Boolean);
+    showToast(parts.length ? `저장했습니다: ${parts.join(', ')}` : '바뀐 내용이 없습니다');
+  });
+
+  // 페이지 이동 (박스당 5줄)
+  function renderPager(id, count, page, unit){
+    const pages = Math.max(1, Math.ceil(count / PAGE));
+    const from = count ? (page - 1) * PAGE + 1 : 0, to = Math.min(count, page * PAGE);
+    const nums = [];
+    for (let n = 1; n <= pages; n++){
+      if (pages <= 7 || n === 1 || n === pages || Math.abs(n - page) <= 1) nums.push(n);
+      else if (nums[nums.length - 1] !== '…') nums.push('…');
+    }
+    $(id).innerHTML = `<span class="pg-info">${fmt(count)}${unit} 중 ${fmt(from)}–${fmt(to)}</span>
+      <div class="pg-btns">
+        <button type="button" data-page="${page - 1}"${page <= 1 ? ' disabled' : ''} aria-label="이전 페이지">‹</button>
+        ${nums.map(n => n === '…' ? '<span class="pg-gap">…</span>' : `<button type="button" data-page="${n}"${n === page ? ' aria-current="page"' : ''} aria-label="${n}페이지">${n}</button>`).join('')}
+        <button type="button" data-page="${page + 1}"${page >= pages ? ' disabled' : ''} aria-label="다음 페이지">›</button>
+      </div>
+      <div class="pg-jump">
+        <input type="number" class="pg-in" id="${id}-in" min="1" max="${pages}" step="1" value="${page}" aria-label="이동할 페이지 번호">
+        <span>/ ${pages}</span>
+        <button type="button" class="pg-go">이동</button>
+      </div>`;
+  }
+  const PAGERS = {
+    'ch-pager': n => { chPage = n; renderChTable(); },
+    'roster-pager': n => { rosterPage = n; renderRoster(); }
+  };
+  Object.entries(PAGERS).forEach(([id, go]) => {
+    const box = $(id);
+    const jump = () => {
+      const inp = $(`${id}-in`), max = Number(inp.max), raw = inp.value.trim(), n = Number(raw);
+      if (!/^\d+$/.test(raw) || n < 1 || n > max){ showToast(`1~${max} 사이의 페이지 번호를 입력해 주세요`); inp.focus(); inp.select(); return; }
+      go(n); $(`${id}-in`)?.focus();
+    };
+    box.addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-page]');
+      if (b && !b.disabled){ go(Number(b.dataset.page)); box.querySelector('[aria-current=page]')?.focus(); }
+      else if (ev.target.closest('.pg-go')) jump();
+    });
+    box.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.classList.contains('pg-in')){ ev.preventDefault(); jump(); } });
+  });
+
+  // CSV 다운로드 (박스별 전체 데이터, 엑셀에서 한글이 깨지지 않도록 BOM 포함)
+  const csvCell = v => {
+    let t = v == null ? '' : String(v);
+    if (/^[=+\-@]/.test(t)) t = "'" + t;          // 엑셀 수식으로 실행되지 않게 막음
+    return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+  async function downloadCsv(name, rows){
+    const blob = new Blob(['\uFEFF' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], {type: 'text/csv;charset=utf-8'});
+    const done = () => showToast(`${name} 파일을 저장했습니다 (${fmt(rows.length - 1)}줄)`);
+    // 크롬·엣지: 저장 창에 파일 이름을 그대로 제안 (로컬 파일로 열면 이름이 'download'로 바뀌는 문제 방지)
+    if (window.showSaveFilePicker){
+      try {
+        const handle = await showSaveFilePicker({suggestedName: name, types: [{description: 'CSV 파일', accept: {'text/csv': ['.csv']}}]});
+        const w = await handle.createWritable(); await w.write(blob); await w.close();
+        return done();
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;   // 사용자가 저장 창을 닫음
+      }
+    }
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    done();
+  }
+  $('ch-csv').addEventListener('click', () => {
+    const rows = [['서버', '상태', '설명', '채널', '인원', '정원', '남은 자리', '마감 여부', '이 브라우저 신청']];
+    SERVERS.forEach(s => s.ch.forEach((v, i) => rows.push([s.name, s.tag[1], s.desc, `${i+1}채널`, v, s.cap[i], Math.max(0, s.cap[i] - v), v >= s.cap[i] ? '마감' : '모집 중', mineOf(s.id, i+1)])));
+    downloadCsv(`등불항로_서버채널현황_${stamp()}.csv`, rows);
+  });
+  $('roster-csv').addEventListener('click', () => {
+    if (!entries.length) return;
+    const rows = [['No.', '신청 일시', '휴대폰 번호', '플랫폼', '서버', '채널', '마케팅 수신', '쿠폰 번호', '최종 변경 일시']];
+    entries.forEach((e, i) => rows.push([i+1, fmtDate(e.at), maskPhone(e.phone), e.os, srvName(e.server), `${e.ch}채널`, e.mkt ? '동의' : '미동의', e.coupon, e.updatedAt ? fmtDate(e.updatedAt) : '']));
+    downloadCsv(`등불항로_신청자명단_${stamp()}.csv`, rows);
+  });
+
+  // 신청자 서버·채널·플랫폼 변경
+  let editingId = null;
+  function fillEdCh(sid){
+    const e = entries.find(x => x.id === editingId), s = SERVERS.find(x => x.id === sid), sel = $('ed-ch');
+    if (!e || !s || !sel) return;
+    sel.innerHTML = s.ch.map((v,i) => {
+      const no = i+1, cur = e.server === sid && e.ch === no, full = !cur && v >= s.cap[i];
+      return `<option value="${no}"${full ? ' disabled' : ''}${cur ? ' selected' : ''}>${no}채널 ${cur ? '(현재)' : full ? '(마감)' : `(${fmt(v)}/${fmt(s.cap[i])})`}</option>`;
+    }).join('');
+    const pick = [...sel.options].find(o => o.selected && !o.disabled) || [...sel.options].find(o => !o.disabled);
+    if (pick) pick.selected = true;
+    else sel.innerHTML = '<option value="">빈 채널 없음</option>';
+  }
+  function refreshAll(){ recount(); render(); renderCh(); update(); renderRoster(); }
+  $('roster-q').addEventListener('input', () => { rosterPage = 1; renderRoster(); });
+  $('roster-srv').addEventListener('change', () => { rosterPage = 1; renderRoster(); });
+  $('roster-body').addEventListener('click', ev => {
+    const del = ev.target.closest('.row-del'), edit = ev.target.closest('.row-edit');
+    if (del){
+      entries = entries.filter(e => e.id !== del.dataset.id);
+      if (editingId === del.dataset.id) editingId = null;
+      save(); refreshAll(); showToast('신청 1건을 삭제했습니다');
+    } else if (edit){
+      editingId = edit.dataset.id; renderRoster(); $('ed-srv')?.focus();
+    } else if (ev.target.closest('.ed-cancel')){
+      editingId = null; renderRoster();
+    } else if (ev.target.closest('.ed-save')){
+      const e = entries.find(x => x.id === editingId); if (!e) return;
+      const sid = $('ed-srv').value, ch = Number($('ed-ch').value), os = $('ed-os').value, s = SERVERS.find(x => x.id === sid);
+      const moved = sid !== e.server || ch !== e.ch, osChanged = os !== e.os;
+      if (!moved && !osChanged){ editingId = null; renderRoster(); showToast('바뀐 내용이 없습니다'); return; }
+      if (moved){
+        if (!ch){ showToast('이 서버에는 옮길 수 있는 채널이 없습니다'); return; }
+        if (s.ch[ch-1] >= s.cap[ch-1]){ showToast('방금 마감된 채널입니다. 다른 채널을 선택해 주세요'); fillEdCh(sid); return; }
+        e.server = sid; e.ch = ch;
+      }
+      if (osChanged) e.os = os;
+      e.updatedAt = new Date().toISOString();
+      editingId = null; save(); refreshAll();
+      showToast(moved && osChanged ? `${s.name} 서버 ${ch}채널, ${os}로 변경했습니다`
+        : moved ? `${s.name} 서버 ${ch}채널로 변경했습니다` : `플랫폼을 ${os}로 변경했습니다`);
+    }
+  });
+  $('roster-body').addEventListener('change', ev => { if (ev.target.id === 'ed-srv') fillEdCh(ev.target.value); });
+  $('roster-clear').addEventListener('click', () => {
+    $('roster-confirm-msg').textContent = `저장된 신청 ${fmt(entries.length)}건을 모두 삭제할까요? 되돌릴 수 없습니다.`;
+    $('roster-confirm').hidden = false; $('roster-confirm-no').focus();
+  });
+  $('roster-confirm-no').addEventListener('click', () => { $('roster-confirm').hidden = true; });
+  $('roster-confirm-yes').addEventListener('click', () => {
+    entries = []; save(); $('roster-confirm').hidden = true; refreshAll(); showToast('명단을 모두 삭제했습니다');
+  });
+  renderRoster();
+
+  let tt;
+  function showToast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2200); }
+
+  // Lanterns
+  const cv = $('sky'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W,H,L=[];
+  function size(){
+    const dpr = Math.min(2, devicePixelRatio||1);
+    W = cv.clientWidth; H = cv.clientHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    L = Array.from({length: Math.round(W/40)}, () => ({x:Math.random()*W, y:Math.random()*H, r:1+Math.random()*2.5, v:.1+Math.random()*.35, p:Math.random()*6.28}));
+  }
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    for (const l of L){
+      const a = .35 + .35*Math.sin(t/900 + l.p);
+      const g = ctx.createRadialGradient(l.x,l.y,0,l.x,l.y,l.r*8);
+      g.addColorStop(0,`rgba(242,184,75,${a})`); g.addColorStop(1,'rgba(242,184,75,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(l.x,l.y,l.r*8,0,6.28); ctx.fill();
+      if (!reduce){ l.y -= l.v; l.x += Math.sin(t/2000+l.p)*.15; if (l.y < -20){ l.y = H+20; l.x = Math.random()*W; } }
+    }
+    if (!reduce) requestAnimationFrame(draw);
+  }
+  size(); addEventListener('resize', () => { size(); if (reduce) draw(0); });
+  reduce ? draw(0) : requestAnimationFrame(draw);
+
+  // 관리자 로그인 (예시용: 브라우저 안에서만 확인하는 방식)
+  function isAuthed(){ try { return sessionStorage.getItem(AUTH_KEY) === ADMIN_HASH; } catch (e) { return memAuth; } }
+  function setAuthed(on){
+    memAuth = on;
+    try { on ? sessionStorage.setItem(AUTH_KEY, ADMIN_HASH) : sessionStorage.removeItem(AUTH_KEY); } catch (e) {}
+  }
+  async function sha256(t){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  const loginErr = msg => { $('login-err').textContent = msg; $('login-err').hidden = !msg; };
+  function lockTick(){
+    const left = Math.ceil((lockUntil - Date.now()) / 1000);
+    if (left > 0){ $('login-btn').disabled = true; loginErr(`로그인을 ${MAX_TRY}번 실패했습니다. ${left}초 뒤에 다시 시도해 주세요.`); lockTimer = setTimeout(lockTick, 1000); }
+    else { $('login-btn').disabled = false; fails = 0; loginErr(''); }
+  }
+  try { lockUntil = Number(sessionStorage.getItem(AUTH_KEY + '-lock')) || 0; } catch (e) {}   // 새로 고쳐도 잠금 유지
+  if (Date.now() < lockUntil) lockTick();
+  $('pw-toggle').addEventListener('click', () => {
+    const show = $('admin-pw').type === 'password';
+    $('admin-pw').type = show ? 'text' : 'password';
+    $('pw-toggle').textContent = show ? '숨기기' : '보기';
+    $('pw-toggle').setAttribute('aria-pressed', String(show));
+  });
+  ['admin-id', 'admin-pw'].forEach(id => $(id).addEventListener('input', () => { $(id).removeAttribute('aria-invalid'); if (Date.now() >= lockUntil) loginErr(''); }));
+  $('login-form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (Date.now() < lockUntil) return;
+    const id = $('admin-id').value.trim(), pw = $('admin-pw').value;
+    if (!id || !pw){
+      loginErr(!id ? '아이디를 입력해 주세요.' : '비밀번호를 입력해 주세요.');
+      $(!id ? 'admin-id' : 'admin-pw').setAttribute('aria-invalid', 'true'); $(!id ? 'admin-id' : 'admin-pw').focus(); return;
+    }
+    if (!window.crypto?.subtle){ loginErr('이 브라우저에서는 로그인을 확인할 수 없습니다. 최신 Chrome이나 Edge로 열어 주세요.'); return; }
+    $('login-btn').disabled = true;
+    const ok = (await sha256(`lantern-admin|${id}:${pw}`)) === ADMIN_HASH;
+    $('login-btn').disabled = false;
+    if (ok){
+      fails = 0; setAuthed(true); $('login-form').reset(); loginErr('');
+      route(); renderRoster(); showToast('관리자로 로그인했습니다');
+      return;
+    }
+    fails += 1; $('admin-pw').value = ''; $('admin-pw').setAttribute('aria-invalid', 'true'); $('admin-pw').focus();
+    if (fails >= MAX_TRY){ lockUntil = Date.now() + LOCK_SEC * 1000; try { sessionStorage.setItem(AUTH_KEY + '-lock', String(lockUntil)); } catch (e) {} lockTick(); }
+    else loginErr(`아이디 또는 비밀번호가 맞지 않습니다. (${fails}/${MAX_TRY})`);
+  });
+  $('logout').addEventListener('click', () => {
+    setAuthed(false); editingId = null; capEdit = false; draft = [];
+    renderRoster(); renderChTable(); route(); showToast('로그아웃했습니다');
+  });
+
+  // Tabs: #home(사전예약) / #admin(관리자, 로그인 필요)
+  function route(){
+    const admin = location.hash === '#admin', authed = isAuthed();
+    $('view-home').hidden = admin;
+    $('view-admin').hidden = !(admin && authed);
+    $('view-login').hidden = !(admin && !authed);
+    $('logout').hidden = !authed;
+    if (admin && !authed) setTimeout(() => $('admin-id').focus(), 0);
+    $('sticky').hidden = admin;
+    document.querySelectorAll('.tabs a').forEach(a => {
+      if ((a.dataset.view === 'admin') === admin) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    document.title = admin ? (authed ? '등불항로 관리자' : '등불항로 관리자 로그인') : '등불항로 사전예약';
+    if (!admin && !W){ size(); if (reduce) draw(0); }
+    const target = !admin && location.hash && location.hash !== '#home' ? document.querySelector(location.hash) : null;
+    target ? target.scrollIntoView() : scrollTo(0, 0);
+  }
+  addEventListener('hashchange', route);
+  // 같은 브라우저의 다른 탭(예: 관리자 탭)에서 신청·삭제하면 명단을 맞춤
+  addEventListener('storage', ev => { if (ev.key === KEY || ev.key === CONFIG_KEY || ev.key === null){ entries = load(); loadConfig(); renderServers(); renderSrvFilter(); refreshAll(); } });
+  route();
+})();
+</script>
+
+</body></html>

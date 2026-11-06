@@ -1,0 +1,6 @@
+{
+  "name": "등불항로 사전예약",
+  "description": "모바일 해양 탐험 RPG 등불항로 사전예약 및 관리자 페이지",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

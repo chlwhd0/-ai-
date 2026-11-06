@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+:root {
+  --sea: #0b1a22;
+  --hull: #11262f;
+  --line: #24414b;
+  --fg: #ece6d6;
+  --muted: #9db0ad;
+  --lamp: #f2b84b;
+  --lamp-ink: #2a1a00;
+  --ok: #7fd1a8;
+  --err: #ff8f7a;
+  --f-display: "Hahmlet", "Nanum Myeongjo", serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--sea);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--f-display);
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--lamp);
+  font-weight: 700;
+}
+
+.sample-tag {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.btn-primary {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  background: var(--lamp);
+  color: var(--lamp-ink);
+  padding: 14px 22px;
+  border-radius: 8px;
+  font-size: 16px;
+  text-decoration: none;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px -6px rgba(242, 184, 75, 0.6);
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--hull);
+  border-color: var(--muted);
+}
+
+.btn-ghost.danger {
+  color: var(--err);
+  border-color: currentColor;
+}
+
+.btn-ghost.danger:hover:not(:disabled) {
+  background: rgba(255, 143, 122, 0.1);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.table-wrap {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--hull);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table-wrap th,
+.table-wrap td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.table-wrap th {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--sea);
+}
+
+.table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .roster-table thead {
+    display: none;
+  }
+  .roster-table,
+  .roster-table tbody,
+  .roster-table tr,
+  .roster-table td {
+    display: block;
+    width: 100%;
+  }
+  .roster-table tr {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .roster-table td {
+    border: 0;
+    padding: 4px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: center;
+  }
+  .roster-table td::before {
+    content: attr(data-label);
+    flex: 0 0 85px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+}

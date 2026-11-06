@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Pre-registration entry for a player",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique registration ID"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Applicant phone number (10 to 11 digits)",
+          "pattern": "^01[016789][0-9]{7,8}$",
+          "minLength": 10,
+          "maxLength": 11
+        },
+        "os": {
+          "type": "string",
+          "description": "Operating system platform",
+          "enum": ["Android", "iOS"]
+        },
+        "server": {
+          "type": "string",
+          "description": "Selected game server ID",
+          "maxLength": 32
+        },
+        "ch": {
+          "type": "number",
+          "description": "Selected server channel number"
+        },
+        "mkt": {
+          "type": "boolean",
+          "description": "Marketing SMS consent"
+        },
+        "coupon": {
+          "type": "string",
+          "description": "Generated coupon code",
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of registration"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["phone", "os", "server", "ch", "mkt", "coupon", "createdAt"]
+    },
+    "ServerConfig": {
+      "title": "ServerConfig",
+      "description": "Server and channel capacity configuration",
+      "type": "object",
+      "properties": {
+        "servers": {
+          "type": "string",
+          "description": "JSON stringified server configurations"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of update"
+        }
+      },
+      "required": ["servers"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": {
+        "$ref": "#/entities/Registration"
+      },
+      "description": "Pre-registration records for players"
+    },
+    "/config/{configId}": {
+      "schema": {
+        "$ref": "#/entities/ServerConfig"
+      },
+      "description": "Global application configuration for servers and channels"
+    }
+  }
+}

@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>등불항로 사전예약</title>
+    <meta name="description" content="모바일 해양 탐험 RPG 등불항로 사전예약 및 관리자 페이지" />
+    <meta property="og:title" content="등불항로 사전예약" />
+    <meta property="og:description" content="모바일 해양 탐험 RPG 등불항로 사전예약 및 관리자 페이지" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" />
+    <style>
+      :root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+      html{scroll-padding-top:env(safe-area-inset-top,0px)}
+      body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}
+      img{max-width:100%}
+      [hidden]:not([hidden=until-found i]){display:none!important}
+    </style>
+    <style>
+/* Layout: 밤바다 위 항해일지 — 히어로(등불 캔버스) → 사전예약 폼 + 누적 보상 항로 → 특징 → 유의사항 */
+:root{
+  --sea:#0b1a22; --hull:#11262f; --line:#24414b; --fg:#ece6d6; --muted:#9db0ad;
+  --lamp:#f2b84b; --lamp-ink:#2a1a00; --ok:#7fd1a8; --err:#ff8f7a;
+  --f-display:"Hahmlet","Nanum Myeongjo",serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.65}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--lamp);font-weight:700}
+.sample{display:inline-block;font-size:11px;letter-spacing:.08em;border:1px solid var(--line);color:var(--muted);padding:2px 8px;border-radius:99px}
+a{color:var(--lamp)}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:3px}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(120% 80% at 70% 0%,#173a45 0%,var(--sea) 60%)}
+#sky{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero .wrap{position:relative;padding-block:56px 48px;display:grid;gap:28px}
+.hero-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hero h1{font-size:clamp(44px,9vw,96px);font-weight:900;letter-spacing:-.02em}
+.hero h1 small{display:block;font-size:.26em;font-weight:500;letter-spacing:.3em;color:var(--muted);margin-top:10px}
+.lede{max-width:34em;color:var(--fg);font-size:17px;margin:0}
+.launch{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end}
+.count{display:flex;gap:10px}
+.count div{min-width:64px;text-align:center;background:rgba(11,26,34,.7);border:1px solid var(--line);border-radius:8px;padding:8px 6px}
+.count b{display:block;font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--lamp);line-height:1.2}
+.count span{font-size:11px;color:var(--muted)}
+.launch-meta{font-size:13px;color:var(--muted)}
+.launch-meta strong{color:var(--fg);font-size:15px;display:block}
+.btn{appearance:none;border:0;cursor:pointer;font:inherit;font-weight:700;background:var(--lamp);color:var(--lamp-ink);padding:14px 22px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-flex;gap:8px;align-items:center;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px -6px rgba(242,184,75,.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Main grid */
+section{padding-block:56px}
+.grid2{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:start}
+.grid2>*{min-width:0}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.sec-head{display:grid;gap:8px;margin-bottom:24px}
+.sec-head h2{font-size:clamp(26px,4vw,34px)}
+.sec-head p{margin:0;color:var(--muted)}
+
+/* Form */
+form{background:var(--hull);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:18px}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
+legend,label.lb{font-size:13px;font-weight:700;color:var(--muted);padding:0;margin-bottom:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);border-radius:8px;padding:12px;text-align:center;cursor:pointer;font-weight:500;transition:border-color .15s,background .15s}
+.seg input:checked+label{border-color:var(--lamp);background:rgba(242,184,75,.1);color:var(--lamp)}
+.seg input:focus-visible+label{outline:2px solid var(--lamp);outline-offset:2px}
+.srv{grid-template-columns:repeat(3,1fr)}
+@media (max-width:480px){.srv{grid-template-columns:1fr}}
+.srv label{display:grid;gap:4px;text-align:left;padding:12px 14px}
+.srv label b{font-family:var(--f-display);font-size:17px}
+.srv label small{font-size:12px;color:var(--muted);line-height:1.4}
+.pill{justify-self:start;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid currentColor}
+.pill.new{color:var(--ok)}.pill.ok{color:var(--muted)}.pill.busy{color:var(--err)}
+.chs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:420px){.chs{grid-template-columns:repeat(2,1fr)}}
+.chs input{position:absolute;opacity:0;pointer-events:none}
+.chs label{border:1px solid var(--line);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;display:grid;gap:2px;font-weight:500}
+.chs label small{font-size:11px;color:var(--muted)}
+.chs input:checked+label{border-color:var(--lamp);background:rgba(242,184,75,.1);color:var(--lamp)}
+.chs input:focus-visible+label{outline:2px solid var(--lamp);outline-offset:2px}
+.chs input:disabled+label{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.meter{height:4px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:4px}
+.meter i{display:block;height:100%;background:var(--muted)}
+.chs input:checked+label .meter i{background:var(--lamp)}
+.field{display:grid;gap:6px}
+input[type=tel]{width:100%;font:inherit;font-family:var(--f-mono);font-size:17px;letter-spacing:.04em;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+input[type=tel]:focus{border-color:var(--lamp);outline:none}
+input[aria-invalid=true]{border-color:var(--err)}
+.hint{font-size:12px;color:var(--muted)}
+.hint.err{color:var(--err)}
+.agree{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer}
+.chk input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--lamp);flex:none}
+.chk.all{font-weight:700}
+.tag{font-size:11px;font-weight:700;margin-right:4px}
+.tag.req{color:var(--lamp)}.tag.opt{color:var(--muted)}
+.done{background:var(--hull);border:1px solid var(--ok);border-radius:14px;padding:28px;display:grid;gap:12px}
+.done h3{font-size:24px;color:var(--ok)}
+.done p{margin:0}
+.coupon{font-family:var(--f-mono);font-size:20px;letter-spacing:.12em;background:var(--sea);border:1px dashed var(--lamp);color:var(--lamp);padding:12px;border-radius:8px;text-align:center}
+.linkbtn{background:none;border:0;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer;justify-self:start;padding:0}
+
+/* Roster */
+.roster-sec{border-top:1px solid var(--line)}
+.roster-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.roster-tools input[type=search],.roster-tools select{font:inherit;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-width:0}
+.roster-tools input[type=search]{flex:1 1 220px}
+.roster-tools .chk{font-size:13px;align-items:center}
+.roster-tools .chk input{margin:0}
+.btn-ghost{appearance:none;font:inherit;font-size:13px;font-weight:700;background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:9px 12px;cursor:pointer}
+.btn-ghost.danger{color:var(--err);border-color:currentColor}
+.btn-ghost:disabled{opacity:.4;cursor:not-allowed}
+.confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:1px solid var(--err);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin-bottom:10px}
+.stats b{color:var(--fg);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.table-wrap{position:relative;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--hull)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+.table-wrap th,.table-wrap td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.table-wrap th{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;background:var(--sea)}
+.table-wrap tbody tr:last-child td{border-bottom:0}
+.table-wrap td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.table-wrap td.empty{text-align:center;color:var(--muted);padding:28px 14px;white-space:normal}
+.sub-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.sub-head h3{margin-bottom:0}
+.cap-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.cap-bar .spacer{flex:1}
+.btn-sm{padding:9px 18px;font-size:14px}
+.cap-cell{display:grid;gap:4px}
+.cap-cell small{font-size:11px;color:var(--muted);font-family:var(--f-body)}
+.cap-in,.ed-sel{font:inherit;font-size:13px;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.cap-in{width:96px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cap-in:focus,.ed-sel:focus{border-color:var(--lamp);outline:none}
+.cap-in[aria-invalid=true]{border-color:var(--err)}
+.cap-of{color:var(--muted)}
+.ed-cell{display:flex;gap:6px}
+.row-acts{display:flex;flex-direction:row;gap:8px;align-items:center;white-space:nowrap;flex-shrink:0}
+.ed-save{background:var(--lamp);color:var(--lamp-ink);border:0;border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;white-space:nowrap;word-break:keep-all;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.table-wrap tr.editing td{background:rgba(242,184,75,.07)}
+.chg{font-size:11px;color:var(--lamp);margin-left:6px}
+/* 신청자 명단: 좁은 화면에서는 카드형 */
+#roster .table-wrap{overflow-x:auto}
+#roster .table-wrap table{min-width:0}
+#roster .table-wrap th,#roster .table-wrap td{padding:10px 10px;white-space:normal}
+#roster .table-wrap th:first-child,#roster .table-wrap td:first-child{padding-left:14px}
+#roster .table-wrap td.num{white-space:nowrap}
+#roster .table-wrap td.date{white-space:normal;min-width:6.5em}
+#roster .table-wrap th:last-child,#roster .table-wrap td:last-child{white-space:nowrap;width:1%;min-width:105px}
+#roster .row-acts{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;white-space:nowrap;gap:8px}
+#roster .ed-save,#roster .ed-cancel,#roster .row-edit,#roster .row-del{white-space:nowrap;word-break:keep-all;flex-shrink:0}
+#roster .ed-cell{flex-wrap:wrap}
+@media (max-width:760px){
+  #roster .table-wrap thead{display:none}
+  #roster .table-wrap table,#roster .table-wrap tbody,#roster .table-wrap tr,#roster .table-wrap td{display:block;width:100%}
+  #roster .table-wrap tr{padding:10px 14px;border-bottom:1px solid var(--line)}
+  #roster .table-wrap tbody tr:last-child{border-bottom:0}
+  #roster .table-wrap td,#roster .table-wrap td:first-child{border:0;padding:3px 0;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;white-space:normal}
+  #roster .table-wrap td::before{content:attr(data-label);flex:0 0 80px;color:var(--muted);font-size:12px;font-family:var(--f-body)}
+  #roster .chg{margin-left:0}
+  #roster .table-wrap td.empty{display:block;padding:20px 0}
+  #roster .table-wrap td.empty::before{content:none}
+}
+/* 관리자 로그인 */
+.login{padding-block:56px 80px}
+.login-card{max-width:400px;margin:0 auto;background:var(--hull);border:1px solid var(--line);border-radius:14px;padding:28px 24px;display:grid;gap:16px}
+.login-card h2{font-size:26px}
+.login-card p{margin:0;color:var(--muted);font-size:13px}
+.login-in{width:100%;font:inherit;font-size:15px;background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:11px 14px}
+.login-in:focus{border-color:var(--lamp);outline:none}
+.login-in[aria-invalid=true]{border-color:var(--err)}
+.pw-row{position:relative}
+.pw-row .login-in{padding-right:64px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);font:inherit;font-size:12px;font-weight:700;padding:6px 8px;cursor:pointer}
+.login-card .btn{justify-content:center}
+.login-card .login-err{color:var(--err);font-size:13px;margin:0}
+.tab-logout{background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer}
+.tab-logout:hover{color:var(--fg)}
+.sub-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin-top:12px;font-size:13px;color:var(--muted)}
+.pg-info{font-variant-numeric:tabular-nums}
+.pg-btns{display:flex;gap:4px;flex-wrap:wrap}
+.pg-btns button,.pg-go{min-width:34px;height:34px;padding:0 10px;border:1px solid var(--line);background:none;color:var(--fg);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pg-go{font-family:var(--f-body);font-weight:700}
+.pg-btns button[aria-current=page]{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:700}
+.pg-btns button:disabled{opacity:.35;cursor:not-allowed}
+.pg-gap{align-self:center;padding:0 4px}
+.pg-jump{display:flex;align-items:center;gap:6px}
+.pg-in{width:64px;height:34px;font:inherit;font-size:13px;font-family:var(--f-mono);background:var(--sea);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:0 8px}
+.pg-in:focus{border-color:var(--lamp);outline:none}
+.add-ch{justify-self:start;background:none;border:1px dashed var(--line);color:var(--lamp);border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.add-ch:disabled{opacity:.4;cursor:not-allowed}
+.srv-add{margin-top:14px;background:var(--sea);border:1px dashed var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
+.srv-add h4{margin:0;font-size:14px;font-family:var(--f-display)}
+.srv-add-grid{display:grid;grid-template-columns:1.4fr 2fr .9fr .8fr 1fr auto;gap:10px;align-items:end}
+@media (max-width:820px){.srv-add-grid{grid-template-columns:1fr 1fr}}
+.srv-add label{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.srv-add input,.srv-add select{font:inherit;font-size:13px;background:var(--hull);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:0 9px;height:36px;min-width:0;width:100%}
+.srv-add input:focus,.srv-add select:focus{border-color:var(--lamp);outline:none}
+.row-edit,.ed-cancel,.row-del{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline;white-space:nowrap;word-break:keep-all;flex-shrink:0;display:inline-flex;align-items:center}
+.yes{color:var(--ok)}
+.warn{color:var(--err);font-size:13px;margin:0 0 12px}
+/* Top nav & admin */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--sea)}
+.topnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:8;background:rgba(11,26,34,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topnav .wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:54px;flex-wrap:nowrap}
+.brand{font-family:var(--f-display);font-weight:900;font-size:18px;margin-right:auto;color:var(--fg);text-decoration:none;white-space:nowrap;flex-shrink:0}
+.tabs{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;flex-shrink:0}
+.tabs a{color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;padding:7px 13px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;flex-shrink:0}
+.tabs a[aria-current=page]{color:var(--lamp-ink);background:var(--lamp)}
+.tabs a:not([aria-current=page]):hover{color:var(--fg);background:var(--hull)}
+.tab-logout{white-space:nowrap;flex-shrink:0}
+@media (max-width:540px){
+  .topnav .wrap{gap:6px;min-height:48px}
+  .brand{font-size:16px}
+  .tabs{gap:4px}
+  .tabs a{font-size:13px;padding:6px 10px}
+  .tab-logout{font-size:12px;padding:6px 9px}
+}
+section[id],#roster{scroll-margin-top:64px}
+.admin{padding-block:40px 64px}
+.admin>.wrap{display:grid;gap:40px}
+.admin>.wrap>*{min-width:0}
+.admin .sec-head{margin-bottom:0}
+.admin h3{font-size:20px;margin-bottom:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:560px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--hull);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:2px;min-width:0}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi b{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.kpi small{font-size:12px;color:var(--muted)}
+.admin-note{font-size:12px;color:var(--muted);margin:0 0 12px}
+.cell-full{color:var(--err)}
+.mine{color:var(--lamp)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Route milestones */
+.route{display:grid;gap:18px}
+.tally{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tally b{font-family:var(--f-mono);font-size:34px;font-variant-numeric:tabular-nums;color:var(--lamp)}
+.tally span{color:var(--muted);font-size:13px}
+.bar{height:8px;background:var(--hull);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#c98a25,var(--lamp));width:0;transition:width .8s ease}
+.stops{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.stops li{display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.stops li:last-child{border-bottom:0}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);justify-self:center}
+.stops li.hit .dot{background:var(--lamp);border-color:var(--lamp);box-shadow:0 0 12px var(--lamp)}
+.stops .goal{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stops .rw{font-weight:500}
+.stops .st{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.stops li.hit .st{border-color:var(--lamp);color:var(--lamp)}
+
+/* Features */
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+@media (max-width:820px){.feats{grid-template-columns:1fr}}
+.feat{display:grid;gap:10px;align-content:start;border-top:2px solid var(--lamp);padding-top:16px}
+.feat .k{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.feat h3{font-size:21px}
+.feat p{margin:0;color:var(--muted)}
+.bg-alt{background:var(--hull);border-block:1px solid var(--line)}
+
+/* Notice */
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{cursor:pointer;font-weight:700}
+details ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+footer{padding-block:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+
+/* Mobile sticky CTA */
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:5;background:rgba(11,26,34,.94);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:none}
+.sticky .btn{width:100%;justify-content:center}
+@media (max-width:640px){.sticky{display:block}footer{padding-bottom:96px}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--sea);padding:10px 16px;border-radius:8px;font-weight:500;font-size:14px;z-index:9}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+    </style>
+  </head>
+  <body>
+    <nav class="topnav" aria-label="페이지 전환"><div class="wrap">
+      <a class="brand" href="/">등불항로</a>
+      <div class="tabs">
+        <a href="/" data-view="home">사전예약</a>
+        <a href="/admin" data-view="admin">관리자</a>
+        <button type="button" class="tab-logout" id="logout" hidden>로그아웃</button>
+      </div>
+    </div></nav>
+    <div id="view-home">
+    <header class="hero">
+      <canvas id="sky" aria-hidden="true"></canvas>
+      <div class="wrap">
+        <div class="hero-top"><span class="eyebrow">모바일 해양 탐험 RPG</span><span class="sample">예시 페이지 · 가상의 게임</span></div>
+        <h1>등불항로<small>LANTERN ROUTE</small></h1>
+        <p class="lede">안개에 잠긴 군도를 등불 하나로 밝혀 나가는 항해 RPG. 선원을 모으고, 꺼진 등대를 다시 켜고, 지도에 없는 섬을 기록하세요.</p>
+        <div class="launch">
+          <div class="count" id="count" aria-label="출시까지 남은 시간">
+            <div><b id="cd-d">00</b><span>일</span></div>
+            <div><b id="cd-h">00</b><span>시간</span></div>
+            <div><b id="cd-m">00</b><span>분</span></div>
+            <div><b id="cd-s">00</b><span>초</span></div>
+          </div>
+          <div class="launch-meta"><strong>2026.12.17 (목) 정식 출시</strong>iOS · Android 동시 출시 예정</div>
+        </div>
+        <div><a class="btn" href="#reserve">사전예약하고 보상 받기 →</a></div>
+      </div>
+    </header>
+
+    <main>
+      <section id="reserve">
+        <div class="wrap grid2">
+          <div>
+            <div class="sec-head">
+              <span class="eyebrow">사전예약</span>
+              <h2>출항 전에 이름을 올려 두세요</h2>
+              <p>출시 당일 문자로 쿠폰 번호를 보내드립니다.</p>
+            </div>
+            <form id="form" novalidate>
+              <fieldset>
+                <legend>플랫폼</legend>
+                <div class="seg">
+                  <input type="radio" name="os" id="os-a" value="Android" checked><label for="os-a">Android</label>
+                  <input type="radio" name="os" id="os-i" value="iOS"><label for="os-i">iOS</label>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>서버</legend>
+                <div class="seg srv" id="servers"></div>
+                <span class="hint">출시 후 서버 이전은 1회 무료로 지원합니다.</span>
+              </fieldset>
+              <fieldset>
+                <legend>채널 <span id="ch-server" style="font-weight:500"></span></legend>
+                <div class="chs" id="channels"></div>
+                <span class="hint">같은 채널 사전예약자끼리 출시 당일 같은 항구에서 시작합니다. 채널 정원이 차면 마감됩니다.</span>
+              </fieldset>
+              <div class="field">
+                <label class="lb" for="phone">휴대폰 번호</label>
+                <input type="tel" id="phone" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" maxlength="13" aria-describedby="phone-hint">
+                <span class="hint" id="phone-hint">본인 명의 번호 1개당 1회 참여할 수 있습니다.</span>
+              </div>
+              <div class="agree">
+                <label class="chk all"><input type="checkbox" id="ag-all">전체 동의</label>
+                <label class="chk"><input type="checkbox" id="ag-age" class="ag req-ag"><span><span class="tag req">필수</span>만 14세 이상입니다</span></label>
+                <label class="chk"><input type="checkbox" id="ag-privacy" class="ag req-ag"><span><span class="tag req">필수</span>개인정보 수집·이용 동의 (휴대폰 번호, 보관: 쿠폰 발송 후 30일)</span></label>
+                <label class="chk"><input type="checkbox" id="ag-mkt" class="ag"><span><span class="tag opt">선택</span>이벤트·업데이트 소식 문자 수신</span></label>
+              </div>
+              <button class="btn" type="submit" id="submit" disabled>사전예약 완료하기</button>
+            </form>
+            <div class="done" id="done" hidden>
+              <h3>사전예약이 완료되었습니다</h3>
+              <p id="done-msg"></p>
+              <div class="coupon" id="coupon">LNTN-0000-0000</div>
+              <p class="hint">위 번호는 예시입니다. 실제 쿠폰은 출시 당일 문자로 발송됩니다.</p>
+              <a class="linkbtn" href="/admin">관리자 페이지에서 명단 확인하기</a>
+              <button type="button" class="linkbtn" id="again">다른 번호로 다시 해 보기</button>
+            </div>
+          </div>
+
+          <div class="route">
+            <div class="sec-head">
+              <span class="eyebrow">누적 보상 항로</span>
+              <h2>예약자가 늘수록 보상이 커집니다</h2>
+              <p>달성한 단계의 보상은 사전예약자 전원에게 지급됩니다.</p>
+            </div>
+            <div class="tally"><b id="total">0</b><span>명 참여 (예시 수치)</span></div>
+            <div class="bar" role="progressbar" aria-label="100만 명 목표 대비 진행률" aria-valuemin="0" aria-valuemax="1000000" id="bar"><i id="bar-fill"></i></div>
+            <ol class="stops" id="stops"></ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-alt">
+        <div class="wrap">
+          <div class="sec-head"><span class="eyebrow">게임 소개</span><h2>항해일지에 남길 세 가지</h2></div>
+          <div class="feats">
+            <div class="feat"><span class="k">항로 개척</span><h3>안개를 걷어내는 탐험</h3><p>등불 반경만큼만 보이는 바다. 연료를 아껴 쓸지, 멀리 비출지 매 항해마다 선택합니다.</p></div>
+            <div class="feat"><span class="k">선원 편성</span><h3>40명의 선원, 5개 직책</h3><p>항해사·포수·요리사·측량사·등불지기를 조합해 배마다 다른 전술을 꾸립니다.</p></div>
+            <div class="feat"><span class="k">등대 복원</span><h3>함께 켜는 서버 등대</h3><p>길드원이 모은 기름으로 꺼진 등대를 밝히면 서버 전체 항로가 열립니다.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <div class="sec-head"><span class="eyebrow">유의사항</span><h2>참여 전에 확인해 주세요</h2></div>
+          <details open><summary>보상 지급 안내</summary><ul>
+            <li>쿠폰은 정식 출시일(2026.12.17)에 입력하신 번호로 문자 발송됩니다.</li>
+            <li>쿠폰 사용 기한은 2027.01.31까지이며, 계정당 1회 사용할 수 있습니다.</li>
+            <li>누적 보상은 출시 시점의 최종 참여자 수 기준으로 지급됩니다.</li>
+          </ul></details>
+          <details><summary>개인정보 처리</summary><ul>
+            <li>수집 항목: 휴대폰 번호, 플랫폼 정보</li>
+            <li>이용 목적: 사전예약 보상 쿠폰 발송</li>
+            <li>보유 기간: 쿠폰 발송 후 30일 뒤 파기</li>
+            <li>예시 페이지의 저장 위치: Firebase Firestore에 안전하게 보관 (관리자 화면에서 관리/삭제 가능)</li>
+          </ul></details>
+          <details><summary>기타</summary><ul>
+            <li>이 페이지는 가상의 게임으로 만든 예시이며, 실제 참가 신청은 Firebase Firestore를 통해 실시간으로 처리됩니다.</li>
+          </ul></details>
+        </div>
+      </section>
+    </main>
+    </div>
+
+    <main id="view-login" class="login" hidden>
+      <div class="wrap">
+        <form class="login-card" id="login-form" novalidate>
+          <span class="eyebrow">관리자</span>
+          <h2>관리자 로그인</h2>
+          <p>관리자 계정으로 로그인해야 신청자 명단과 서버·채널 관리 화면을 볼 수 있습니다.</p>
+          <button type="button" class="btn" id="google-login-btn" style="background:#fff;color:#1f2937;border:1px solid #d1d5db;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            Google 계정으로 관리자 로그인
+          </button>
+          <div style="text-align:center;font-size:12px;color:var(--muted)">또는 아이디/비밀번호로 로그인</div>
+          <div class="field">
+            <label class="lb" for="admin-id">아이디</label>
+            <input class="login-in" id="admin-id" autocomplete="username" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="lb" for="admin-pw">비밀번호</label>
+            <div class="pw-row">
+              <input class="login-in" type="password" id="admin-pw" autocomplete="current-password">
+              <button type="button" class="pw-toggle" id="pw-toggle" aria-pressed="false">보기</button>
+            </div>
+          </div>
+          <p class="login-err" id="login-err" role="alert" hidden></p>
+          <button class="btn" type="submit" id="login-btn">로그인</button>
+        </form>
+      </div>
+    </main>
+
+    <main id="view-admin" class="admin" hidden>
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">관리자</span>
+          <h2>사전예약 관리</h2>
+        </div>
+        <p class="warn" id="storage-warn" hidden>이 브라우저에서는 저장소를 쓸 수 없어, 새로 고치면 명단이 사라집니다.</p>
+        <div class="kpis" id="kpis"></div>
+
+        <div>
+          <div class="sub-head">
+            <h3>서버 · 채널 현황</h3>
+            <div class="sub-actions"><button type="button" class="btn-ghost" id="ch-csv">CSV 다운로드</button><button type="button" class="btn-ghost" id="cap-edit">정원 · 채널 수정</button></div>
+          </div>
+          <p class="admin-note" id="ch-note"></p>
+          <p class="warn" id="cap-err" hidden></p>
+          <div class="table-wrap">
+            <table>
+              <thead id="ch-head"></thead>
+              <tbody id="ch-body"></tbody>
+            </table>
+          </div>
+          <nav class="pager" id="ch-pager" aria-label="서버 · 채널 현황 페이지"></nav>
+          <form class="srv-add" id="srv-add" hidden novalidate>
+            <h4>서버 추가</h4>
+            <div class="srv-add-grid">
+              <label>서버 이름<input id="na-name" maxlength="10" placeholder="예: 은빛여울" autocomplete="off"></label>
+              <label>설명<input id="na-desc" maxlength="20" placeholder="예: 신규 이벤트 서버" autocomplete="off"></label>
+              <label>상태<select id="na-tag"><option value="new">신규</option><option value="ok">원활</option><option value="busy">혼잡</option></select></label>
+              <label>채널 수<input type="number" id="na-ch" min="1" max="10" step="1" value="4"></label>
+              <label>채널 정원<input type="number" id="na-cap" min="1" max="99999" step="1" value="5000"></label>
+              <button type="submit" class="btn-ghost">서버 추가</button>
+            </div>
+            <p class="warn" id="na-err" hidden></p>
+          </form>
+          <div class="cap-bar" id="cap-bar" hidden>
+            <button type="button" class="btn-ghost" id="cap-reset">모두 기본값 5,000명으로</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn-ghost" id="cap-cancel">취소</button>
+            <button type="button" class="btn btn-sm" id="cap-save">변경 사항 저장</button>
+          </div>
+        </div>
+
+        <div id="roster">
+          <h3>신청자 명단</h3>
+          <p class="admin-note">연락처 가운데 4자리는 블라인드 처리됩니다. 신청 내역은 Firebase Firestore에 실시간으로 안전하게 동기화됩니다.</p>
+          <div class="roster-tools">
+            <input type="search" id="roster-q" placeholder="번호 뒤 4자리 또는 서버 이름으로 검색" aria-label="명단 검색">
+            <select id="roster-srv" aria-label="서버로 거르기"><option value="">전체 서버</option></select>
+            <button type="button" class="btn-ghost" id="roster-csv">CSV 다운로드</button>
+            <button type="button" class="btn-ghost danger" id="roster-clear">명단 전체 삭제</button>
+          </div>
+          <div class="confirm" id="roster-confirm" hidden>
+            <span id="roster-confirm-msg"></span>
+            <button type="button" class="btn-ghost danger" id="roster-confirm-yes">삭제</button>
+            <button type="button" class="btn-ghost" id="roster-confirm-no">취소</button>
+          </div>
+          <div class="stats" id="roster-stats"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>No.</th><th>신청 일시</th><th>휴대폰 번호</th><th>플랫폼</th><th>서버 · 채널</th><th>마케팅 수신</th><th>쿠폰 번호</th><th><span class="sr">관리</span></th></tr></thead>
+              <tbody id="roster-body"></tbody>
+            </table>
+          </div>
+          <nav class="pager" id="roster-pager" aria-label="신청자 명단 페이지"></nav>
+        </div>
+      </div>
+    </main>
+    <footer><div class="wrap">© 2026 Example Studio · 등불항로는 가상의 게임입니다 · 게임물 등급 분류 예정</div></footer>
+
+    <div class="sticky" id="sticky"><a class="btn" href="#reserve">사전예약하기</a></div>
+    <div class="toast" id="toast" hidden></div>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

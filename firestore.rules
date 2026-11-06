@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'hitodays@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll(['phone', 'os', 'server', 'ch', 'mkt', 'coupon', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'phone', 'os', 'server', 'ch', 'mkt', 'coupon', 'createdAt', 'updatedAt', 'at']) &&
+             data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 11 &&
+             data.phone.matches('^01[016789][0-9]{7,8}$') &&
+             (data.os == 'Android' || data.os == 'iOS') &&
+             data.server is string && data.server.size() > 0 && data.server.size() <= 32 &&
+             data.ch is int && data.ch >= 1 && data.ch <= 10 &&
+             data.mkt is bool &&
+             data.coupon is string && data.coupon.size() >= 5 && data.coupon.size() <= 32 &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    function isValidServerConfig(data) {
+      return data.keys().hasAll(['servers']) &&
+             data.keys().hasOnly(['servers', 'updatedAt']) &&
+             data.servers is string && data.servers.size() <= 65536;
+    }
+
+    match /registrations/{registrationId} {
+      allow read: if true;
+      allow create: if isValidId(registrationId) && isValidRegistration(incoming());
+      allow update: if isValidId(registrationId) && (isAdmin() || isValidRegistration(incoming()));
+      allow delete: if isValidId(registrationId) && (isAdmin() || isSignedIn());
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isValidId(configId) && (isAdmin() || isSignedIn()) && isValidServerConfig(incoming());
+    }
+  }
+}
